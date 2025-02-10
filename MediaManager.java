@@ -1,11 +1,11 @@
-import java.util.*;
+import java.util.Scanner;
 
 public class MediaManager {
     private static MediaManager instance;
-    private List<Media> mediaList;
+    private DatabaseManager dbManager;
 
     private MediaManager() {
-        mediaList = new ArrayList<>();
+        dbManager = new DatabaseManager();
     }
 
     public static MediaManager getInstance() {
@@ -15,89 +15,126 @@ public class MediaManager {
         return instance;
     }
 
-    public void addMedia(Media media) {
-        if (mediaList.stream().anyMatch(m -> m.getTitle().equalsIgnoreCase(media.getTitle()))) {
-            System.out.println("Media with this title already exists.");
-        } else {
-            mediaList.add(media);
-            System.out.println("Media added successfully.");
-        }
-    }
+    public void startTerminal() {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.println("\nSelect an action:");
+            System.out.println("1. Add media");
+            System.out.println("2. Update status");
+            System.out.println("3. Delete media");
+            System.out.println("4. Display media list");
+            System.out.println("5. Sort by title");
+            System.out.println("6. Sort by rating");
+            System.out.println("7. Exit");
 
-    public boolean mediaExists(String title) {
-        return mediaList.stream().anyMatch(media -> media.getTitle().equalsIgnoreCase(title));
-    }
+            String command = scanner.nextLine();
 
-    public void updateMediaStatus(String title, String newStatus) {
-        for (Media media : mediaList) {
-            if (media.getTitle().equalsIgnoreCase(title)) {
-                media.setStatus(newStatus);
-                System.out.println("Status updated!");
-                return;
+            switch (command) {
+                case "1": {
+                    System.out.println("Enter title:");
+                    String title = scanner.nextLine();
+
+                    String type = getValidMediaType(scanner);
+                    String status = getValidStatus(scanner);
+                    double rating = getValidRating(scanner);
+
+                    dbManager.addMedia(title, status, rating, type);
+                    break;
+                }
+                case "2": {
+                    System.out.println("Enter media title to update:");
+                    String title = scanner.nextLine();
+
+                    String newStatus = getValidStatus(scanner);
+
+                    dbManager.updateMediaStatus(title, newStatus);
+                    break;
+                }
+                case "3": {
+                    System.out.println("Enter media title to delete:");
+                    String title = scanner.nextLine();
+                    dbManager.deleteMedia(title);
+                    break;
+                }
+                case "4": {
+                    dbManager.displayMedia();
+                    break;
+                }
+                case "5": {
+                    dbManager.sortMediaByTitle();
+                    break;
+                }
+                case "6": {
+                    dbManager.sortMediaByRating();
+                    break;
+                }
+                case "7": {
+                    dbManager.closeConnection();
+                    System.out.println("Goodbye!");
+                    return;
+                }
+                default:
+                    System.out.println("Invalid command. Please try again.");
             }
         }
-        System.out.println("Media not found. Please check the title and try again.");
     }
 
-    public void deleteMedia(String title) {
-        Optional<Media> mediaOptional = mediaList.stream()
-                .filter(media -> media.getTitle().equalsIgnoreCase(title))
-                .findFirst();
+    private String getValidStatus(Scanner scanner) {
+        while (true) {
+            System.out.println("Select status:");
+            System.out.println("1 - Planned");
+            System.out.println("2 - Watching");
+            System.out.println("3 - Watched");
+            String choice = scanner.nextLine();
 
-        if (mediaOptional.isPresent()) {
-            mediaList.remove(mediaOptional.get());
-            System.out.println("Media deleted successfully.");
-        } else {
-            System.out.println("Media not found. Please check the title and try again.");
-        }
-    }
-
-    public void rateMedia(String title, double rating) {
-        for (Media media : mediaList) {
-            if (media.getTitle().equalsIgnoreCase(title)) {
-                media.setRating(rating);
-                System.out.println("Rating updated!");
-                return;
-            }
-        }
-        System.out.println("Media not found.");
-    }
-
-    public void searchMedia(String keyword) {
-        List<Media> results = mediaList.stream()
-                .filter(media -> media.getTitle().toLowerCase().contains(keyword.toLowerCase()))
-                .toList();
-
-        if (results.isEmpty()) {
-            System.out.println("No results found for keyword: " + keyword);
-        } else {
-            System.out.println("Search results:");
-            for (Media media : results) {
-                System.out.println(media.getType() + ": " + media.getTitle() + " [" + media.getStatus() + "] Rating: " + media.getRating());
+            switch (choice) {
+                case "1":
+                    return "Planned";
+                case "2":
+                    return "Watching";
+                case "3":
+                    return "Watched";
+                default:
+                    System.out.println(" Invalid choice! Please enter 1, 2, or 3.");
             }
         }
     }
 
-    public void sortMediaByTitle() {
-        mediaList.sort(Comparator.comparing(Media::getTitle, String.CASE_INSENSITIVE_ORDER));
-        System.out.println("List sorted by title:");
-        displayMedia();
-    }
+    private String getValidMediaType(Scanner scanner) {
+        while (true) {
+            System.out.println("Select media type:");
+            System.out.println("1 - Film");
+            System.out.println("2 - Series");
+            System.out.println("3 - Anime");
+            String choice = scanner.nextLine();
 
-    public void sortMediaByRating() {
-        mediaList.sort(Comparator.comparingDouble(Media::getRating).reversed());
-        System.out.println("List sorted by rating:");
-        displayMedia();
-    }
-
-    public void displayMedia() {
-        if (mediaList.isEmpty()) {
-            System.out.println("The list is empty.");
-            return;
+            switch (choice) {
+                case "1":
+                    return "Film";
+                case "2":
+                    return "Series";
+                case "3":
+                    return "Anime";
+                default:
+                    System.out.println(" Invalid choice! Please enter 1, 2, or 3.");
+            }
         }
+    }
 
-        for (Media media : mediaList) {
-            System.out.println(media.getType() + ": " + media.getTitle() + " [" + media.getStatus() + "] Rating: " + media.getRating());
+    private double getValidRating(Scanner scanner) {
+        while (true) {
+            System.out.println("Enter rating (0.0 - 10.0):");
+            String input = scanner.nextLine();
+            try {
+                double rating = Double.parseDouble(input);
+                if (rating >= 0.0 && rating <= 10.0) {
+                    return rating;
+                } else {
+                    System.out.println(" Rating must be between 0.0 and 10.0.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println(" Invalid input. Please enter a number between 0.0 and 10.0.");
+            }
         }
     }
 }
